@@ -80,5 +80,107 @@ func main() {
 下面来看3个关键点的详细分析：
 `BEEGO.RUN()`主要的工作：
 ```
+// github.com/astaxie/beego/beego.go
+func Run(params ...string) {
+	// 启动http服务之前的一些初始化 忽略 
+	// http服务的ip&port设置
+	if len(params) > 0 && params[0] != "" {
+		strs := strings.Split(params[0],":")
+		if len(strs) > 0 && strs[0] != "" {
+			BConfig.Listen.HTTPAddr = strs[0]
+		}
+		if len(strs) > 1 && strs[1] != "" {
+			BConfig.Listen.HTTPPort,_ = strconv.Atoi(strs[1])
+		}
+	}
 
+	// 又一个run 往下看
+	BeeApp.Run()
+}
 ```
+```
+// github.com/astaxie/beego/app.go
+func (app *App) Run(mws ...MiddleWare) {
+	// ... 省略
+	// 看了下这里app.Server的类型就是*http.Server也就是说用的原生http包
+	app.Server.Handler = app.Handlers
+
+	// ... 省略
+	if BConfig.Listen.EnableHTTP {
+		go func() {
+			app.Server.Addr = addr
+			logs.Info("http server Running on http://%s",app.Server.Addr)
+
+			// 默认配置false不强制tcp4
+			if BConfig.Listen.ListenTCP4 {
+				// ...
+				// 忽略 默认false
+			} else {
+				// 关键点 ListenAndServe: app.Server的类型就是*http.Server所以这里就启动http服务
+				if err := app.Server.ListenAndServe(); err != nil {
+					logs.Critical("ListenAndServe:",err)
+					time.Sleep(100 * time.Microsecond)
+					endRunning <- true
+				}
+			}
+		}()
+	}
+	// 阻塞到服务启动
+	<- endRunning
+}
+// 看到这里http已经启动了 而且是注册Handler的方式
+```
+接着去找这个Handler的ServeHTTP方式，通过上面的这段代码`app.Server.Handler = app.Handlers`，我们找到了下面的定义，Handler即是`ControllerRegister`的值，所以每次请求来了就会去执行`ControllerRegister.ServeHTTP(rw http.ResponseWriter, r *http.Request)`
+```
+// src/github.com/astaxie/beego/app.go
+func init() {
+	// 调用 创建beego框架示例的方法
+	BeeApp = NewApp()
+}
+
+// App结构体
+type App struct {
+	// 关键的请求回调Handler
+	Handlers *ControllerRegister
+	// http包的服务
+	Server *http.Server
+}
+
+func NewApp() *App {
+	// 初始化http handler
+	cr := NewControllerRegister()
+	// 创建beego实例
+	app := &App{Handlers:cr, Server:&http.Server{}}
+	return app
+}
+```
+通过追`beego.Run()`的代码，目前我们得到的结论就是：
+1. 使用http包启动的服务
+2. 没有使用`http.HandleFun()`的定义路由策略，而是注册Handler的方式
+
+所以beego就是通过`beego.Router()`自己管理路由，如果http请求来了，回调`ControllerRegister.ServeHTTP(rw http.ResponseWriter, r *http.Request)`方法，在`ControllerRegister.ServeHTTP(rw http.ResponseWriter, r *http.Request)`方法中去匹配路由并执行对应的controller也就是beego`ControllerInterface`类型的控制器的方法，比如RESTFUL或者自定义等。
+
+**BEEGO.ROUTER()如何注册路由**
+</br>首先路由文件是如何加载的，我们发现在`main.go`文件里导入了路由包：
+```
+package main
+
+import (
+	// 导入routers包 只执行init方法
+	_ "beego-code-read/routers"
+	"github.com/astaxie/beego"
+)
+
+func main() {
+	beego.Run()
+}
+```
+上面我们启动了http服务，接着关键就是`beego.Router()`如何注册路由了。追下代码如下：
+```
+beego.Router()
+-> BeeApp.Handlers.Add(rootpath,c,mappingMethods...)
+-> ControllerRegister.addWithMethodParams(pattern,c,nil,mappingMethods...)
+-> ControllerRegister.addToRouter(method, pattern string, r *ControllerInfo) 
+-> *Tree.AddRouter(pattern string, runObject interface{})
+```
+最后就是在`*Tree.AddRouter()`完成了路由注册，至此这个beego框架的流程就基本理顺了。
