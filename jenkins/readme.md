@@ -54,6 +54,7 @@
         Registry Mirrors:
         http://f1361db2.m.daocloud.io/
         ```
+
 2. 通过docker安装容器
     + 安装jenkins
          ```
@@ -69,6 +70,8 @@
             jenkinsci/blueocean  ## 镜像名
         // 这里建议加一个使用 --name参数，给容器起一个别名
          ```
+    
+3. Jenkins的相关配置
     + Jenkins与Gitlab建立连接
         + 现在Gitlab建立访问令牌，注意：建立好访问令牌之后需要立即保存，不然需要重新建立
         ![](https://ae01.alicdn.com/kf/Hd926dd696cff474d91b87f55f2ce89ffu.png)
@@ -76,3 +79,12 @@
         ![](https://ae01.alicdn.com/kf/He4fa08c0d6484da7acb8c94d12c8ca2fi.png)
         ![](https://ae01.alicdn.com/kf/H84e0a788811e49178a78e0c44255a4c4I.png)
         ![](https://ae01.alicdn.com/kf/H2cd17a8d242a466f9daecd64f3b534aew.png)
+    + Jenkins添加git凭据
+        + 添加全局凭据，然后将git的<font color=red>私钥</font>复制上去
+        ![](https://ae01.alicdn.com/kf/H3d1c7ec45f724c338dd11d2b3a0b6b7av.png)
+    + Jenkins添加slave节点
+        + 添加slave节点
+        ![](https://ae01.alicdn.com/kf/H89459139210340cd800bab079ec1fa47t.png)
+        + slave节点的配置
+        ![](https://ae01.alicdn.com/kf/Hb858aaedb36e48b08af6dd030c6d3d85z.png)
+        ![](https://ae01.alicdn.com/kf/H023cbb73e9a444ca9f10fe134c66fcb9r.png)
