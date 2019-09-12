@@ -70,6 +70,72 @@
             jenkinsci/blueocean  ## 镜像名
         // 这里建议加一个使用 --name参数，给容器起一个别名
          ```
+    + 安装Mysql
+        1. 安装mysql
+            ```
+            docker run \
+	        -d \
+	        -p 3306:3306 \
+	        --name mysql \
+	        -v /docker/mysql/conf:/etc/mysql/conf.d \
+	        -v /docker/mysql/logs:/logs \
+	        -v /docker/mysql/data:/var/lib/mysql \
+	        -e MYSQL_ROOT_PASSWORD=123456 \
+	        mysql:5.7
+            ```
+        2. 创建数据库和添加远程登录用户名
+            ```
+            create database sonar;
+
+            CREATE USER 'sonar'@'%' IDENTIFIED WITH mysql_native_password BY 'sonar';
+            GRANT ALL PRIVILEGES ON *.* TO 'sonar'@'%';
+            ```
+    + 安装sonarQube
+       1. 安装SonarTest容器
+            ```
+            // 1.创建/docker/sonarqube文件夹
+            mkdir -p /docker/sonarqube
+
+            // 2.创建容器
+            docker run -d --name sonartest sonarqube:7.4-community
+
+            // 3.进入容器内部拷贝文件
+            docker exec -it sonarqube /bin/bash
+            // 命令解释：将conf/ data/ extensions文件递归下拷贝到/docker/sonarqube目录中
+            scp -r conf/ data/ extensions/ logs/ root@127.0.0.1:/docker/sonarqube
+            scp是ssh的cp，root为用户名，127.0.0.1为远程服务器的密码。
+            输入yes，然后输入密码
+
+            // 4.退出容器并删除容器
+            exit // 退出容器
+            docker stop sonartest // 暂停容器运行
+            docker rm sonartest // 删除容器
+
+            // 5.修改文件夹权限
+            chmod -R 777 /docker/sonarqube
+            ```
+        2. 安装sonarqube并于mysql服务建立联系
+            ```
+            docker run \
+            -d \
+            --name sonarqube \
+            -p 9000:9000 \
+            -p 9092:9092 \
+            --link=mysql:mysql \
+            -v /data/sonarqube/logs:/opt/sonarqube/logs \
+            -v /data/sonarqube/conf:/opt/sonarqube/conf \
+            -v /data/sonarqube/data:/opt/sonarqube/data \
+            -v /data/sonarqube/extensions:/opt/sonarqube/extensions \
+            -e SONARQUBE_JDBC_USERNAME=sonar \
+            -e SONARQUBE_JDBC_PASSWORD=sonar \
+            -e SONARQUBE_JDBC_URL="jdbc:mysql://127.0.0.1:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance&useSSL=false" \
+            sonarqube:7.4-community
+            注意
+            ```
+    + 部署Sonar-Scanner
+    + 参考资料：[mysql+sonar](https://blog.csdn.net/KissedBySnow/article/details/90437605)
+        
+    
     
 3. Jenkins的相关配置
     + Jenkins与Gitlab建立连接
@@ -88,3 +154,4 @@
         + slave节点的配置
         ![](https://ae01.alicdn.com/kf/Hb858aaedb36e48b08af6dd030c6d3d85z.png)
         ![](https://ae01.alicdn.com/kf/H023cbb73e9a444ca9f10fe134c66fcb9r.png)
+
