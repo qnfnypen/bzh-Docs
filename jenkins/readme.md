@@ -54,6 +54,16 @@
         Registry Mirrors:
         http://f1361db2.m.daocloud.io/
         ```
+    + docker镜像加速站配置
+        + 修改daemon.json文件
+            ```
+            vim /etc/docker/daemon.json
+            ```
+        + 参考文档-镜像站[https://blog.csdn.net/glfxml/article/details/91985586]
+        + 重新启动docker
+            ```
+            systemctl restart docker
+            ```
 
 2. 通过docker安装容器
     + 安装jenkins
@@ -63,7 +73,7 @@
             -u root \            ## user
             --rm \               ## 关闭时自动删除Docker容器，这里不建议使用
             -d \                 ## 后台运行容器
-            -p 8080:8080 \       ## 暴露/映射端口，使得外部可以访问
+            -p 8080:8080 \       ## 暴露/映射端口，使得外部可以访问，localport:containerport
             -p 50000:50000 \ 
             -v jenkins-data:/var/jenkins_home \  ## 映射到本地卷，根据需求自己修改映射，:号左边为本机目录，右边为docker容器内部的目录
             -v /var/run/docker.sock:/var/run/docker.sock \ 
@@ -74,14 +84,14 @@
         1. 安装mysql
             ```
             docker run \
-	        -d \
-	        -p 3306:3306 \
-	        --name mysql \
-	        -v /docker/mysql/conf:/etc/mysql/conf.d \
-	        -v /docker/mysql/logs:/logs \
-	        -v /docker/mysql/data:/var/lib/mysql \
-	        -e MYSQL_ROOT_PASSWORD=123456 \
-	        mysql:5.7
+            -d \
+            -p 3306:3306 \
+            --name mysql \
+            -v /docker/mysql/conf:/etc/mysql/conf.d \
+            -v /docker/mysql/logs:/logs \
+            -v /docker/mysql/data:/var/lib/mysql \
+            -e MYSQL_ROOT_PASSWORD=123456 \
+            mysql:5.7
             ```
         2. 创建数据库和添加远程登录用户名
             ```
@@ -100,7 +110,7 @@
             docker run -d --name sonartest sonarqube:7.4-community
 
             // 3.进入容器内部拷贝文件
-            docker exec -it sonarqube /bin/bash
+            docker exec -it sonartest /bin/bash
             // 命令解释：将conf/ data/ extensions文件递归下拷贝到/docker/sonarqube目录中
             scp -r conf/ data/ extensions/ logs/ root@127.0.0.1:/docker/sonarqube
             scp是ssh的cp，root为用户名，127.0.0.1为远程服务器的密码。
@@ -122,15 +132,14 @@
             -p 9000:9000 \
             -p 9092:9092 \
             --link=mysql:mysql \
-            -v /data/sonarqube/logs:/opt/sonarqube/logs \
-            -v /data/sonarqube/conf:/opt/sonarqube/conf \
-            -v /data/sonarqube/data:/opt/sonarqube/data \
-            -v /data/sonarqube/extensions:/opt/sonarqube/extensions \
+            -v /docker/sonarqube/logs:/opt/sonarqube/logs \
+            -v /docker/sonarqube/conf:/opt/sonarqube/conf \
+            -v /docker/sonarqube/data:/opt/sonarqube/data \
+            -v /docker/sonarqube/extensions:/opt/sonarqube/extensions \
             -e SONARQUBE_JDBC_USERNAME=sonar \
             -e SONARQUBE_JDBC_PASSWORD=sonar \
             -e SONARQUBE_JDBC_URL="jdbc:mysql://127.0.0.1:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance&useSSL=false" \
             sonarqube:7.4-community
-            注意
             ```
     + 部署Sonar-Scanner
     + 参考资料：[mysql+sonar](https://blog.csdn.net/KissedBySnow/article/details/90437605)
@@ -139,7 +148,7 @@
     
 3. Jenkins的相关配置
     + Jenkins与Gitlab建立连接
-        + 现在Gitlab建立访问令牌，注意：建立好访问令牌之后需要立即保存，不然需要重新建立
+        + 先在Gitlab建立访问令牌，注意：建立好访问令牌之后需要立即保存，不然需要重新建立
         ![](https://ae01.alicdn.com/kf/Hd926dd696cff474d91b87f55f2ce89ffu.png)
         + 在Jenkins上进行相关配置
         ![](https://ae01.alicdn.com/kf/He4fa08c0d6484da7acb8c94d12c8ca2fi.png)
