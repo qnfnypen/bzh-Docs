@@ -40,7 +40,7 @@
         sudo yum install docker-ce-<VERSION_STRING> docker-ce-cli-<VERSION_STRING> containerd.io  // 选择版本安装
 
         // 检查是否安装成功
-        // docekr version 
+        docker version 
 
         // 将仓库变更为国内的镜像仓库
         curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s http://f1361db2.m.daocloud.io
